@@ -63,7 +63,7 @@ class Tunnel {
     };
     tunnel.session((token) => {
         console.log('main.session.success', token);
-        tunnel.terminal('ls', r,
+        tunnel.terminal('ls', token,
             (result) => {
                 console.log('main.terminal.success', result);
             }, failure
