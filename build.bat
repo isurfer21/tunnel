@@ -9,10 +9,14 @@ call :xc windows amd64 tunnel .exe
 call :xc linux 386 tunnel
 call :xc linux amd64 tunnel
 echo Done!
+goto end
 
 :xc
 	echo %3_%1_%2
 	set GOOS=%1
 	set GOARCH=%2
 	go build -o bin\%3_%1_%2%4 %3.go
+	goto end
+
+:end
 	exit /b
