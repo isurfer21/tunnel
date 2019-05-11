@@ -1,5 +1,6 @@
 import requests
 import json
+import hashlib
 
 APP_URL = "http://127.0.0.1:9999"
 
@@ -15,20 +16,30 @@ class Utility:
             # print("invalid json: %s" % error)
             return False
 
+    @staticmethod
+    def generate_api_key(username, password):
+        auth_str = username + '|' + password
+        api_key = hashlib.md5(auth_str.encode())
+        return api_key.hexdigest()
+
 
 class TestCase:
     count = 0
 
-    def session(self):
+    def session(self, apikey):
         self.count += 1
         print(self.count)
         url = APP_URL + '/session'
         print(' url\t›', url)
+        payload = {
+            "cak": apikey
+        }
         headers = {
+            'content-type': "application/x-www-form-urlencoded",
             'cache-control': "no-cache"
         }
         raw_response = requests.request(
-            "POST", url, headers=headers
+            "POST", url, data=payload, headers=headers
         )
         # print(' raw\t›', raw_response.text)
         json_response = json.loads(raw_response.text)
@@ -70,6 +81,8 @@ class TestCase:
 
 print('TestCase')
 testCase = TestCase()
-token = testCase.session()
+apiKey = Utility.generate_api_key('admin', '123456')
+print(' apiKey\t›', apiKey)
+token = testCase.session(apiKey)
 testCase.terminal(token)
 print('\nDone!')

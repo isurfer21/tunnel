@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -100,6 +101,12 @@ func (u Utility) genAuthKey() string {
 	return id
 }
 
+func (u Utility) genApiKey(username string, password string) string {
+	data := []byte(username + "|" + password)
+	id := fmt.Sprintf("%x", md5.Sum(data))
+	return id
+}
+
 // WebService contains browser specific commands.
 type WebService struct {
 	authKey string
@@ -110,14 +117,39 @@ func (ws WebService) sessionToken(w http.ResponseWriter, r *http.Request) {
 	qp := r.URL.Query()
 	callback := qp.Get("callback")
 	blazon := Blazon{w, callback}
-	if authKey == "" {
-		util := Utility{}
-		authKey = util.genAuthKey()
+	nextStep := false
+	clientApiKey := ""
+	if callback != "" {
+		clientApiKey = qp.Get("cak")
+		nextStep = true
+	} else {
+		err := r.ParseForm()
+		if err != nil {
+			blazon.wrapper(blazon.trouble(string(err.Error())))
+		} else {
+			clientApiKey = r.PostFormValue("cak")
+			nextStep = true
+		}
 	}
-	dix := map[string]string{
-		"token": authKey}
-	output, _ := json.Marshal(dix)
-	blazon.wrapper(blazon.publish(string(output)))
+	if nextStep {
+		if clientApiKey != "" {
+			util := Utility{}
+			serverApiKey := util.genApiKey(userId, userPw)
+			if clientApiKey == serverApiKey {
+				if authKey == "" {
+					authKey = util.genAuthKey()
+				}
+				dix := map[string]string{
+					"token": authKey}
+				output, _ := json.Marshal(dix)
+				blazon.wrapper(blazon.publish(string(output)))
+			} else {
+				blazon.wrapper(blazon.trouble("ClientAPIKey is invalid"))
+			}
+		} else {
+			blazon.wrapper(blazon.trouble("ClientAPIKey is missing"))
+		}
+	}
 }
 
 // curl -d "token=value&cmd=ls" -X POST http://localhost:9999/terminal
@@ -270,7 +302,7 @@ func (s Server) initialize() {
 
 var (
 	appName     = "Tunnel"
-	version     = "1.0.0"
+	version     = "1.0.1"
 	docPath     = ""
 	hostIP      = "127.0.0.1"
 	portNum     = 9999
@@ -278,6 +310,8 @@ var (
 	openBrowser = false
 	corsEnabled = true
 	authKey     = ""
+	userId      = "admin"
+	userPw      = "123456"
 )
 
 type argT struct {
@@ -288,6 +322,8 @@ type argT struct {
 	Browser bool   `cli:"b,browser" usage:"open browser on server start" dft:"false"`
 	AppRoot bool   `cli:"a,approot" usage:"serve from application's root" dft:"false"`
 	Cors    bool   `cli:"x,cors" usage:"allows cross domain requests" dft:"false"`
+	User    string `cli:"i,user" usage:"username of account" dft:"admin"`
+	Pass    string `cli:"c,pass" usage:"password of account" dft:"123456"`
 }
 
 func main() {
@@ -303,6 +339,8 @@ func main() {
 		openBrowser = argv.Browser
 		appRoot = argv.AppRoot
 		corsEnabled = argv.Cors
+		userId = argv.User
+		userPw = argv.Pass
 		mode = true
 		return nil
 	})
