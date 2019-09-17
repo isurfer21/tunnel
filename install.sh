@@ -54,6 +54,7 @@ else
 	printf "  export PATH=\"\$PATH:$INSTALLATION_DIR\" \n"
 	printf "Run 'tunnel --help' to get started \n"
 fi
+cd "$CURRENT_DIR"
 
 printf "Done!\n"
 exit 0
