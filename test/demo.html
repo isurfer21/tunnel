@@ -8,7 +8,38 @@
 <body>
     <h1>Test Tunnel</h1>
     <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
-    <script src="../tunnel.js" type="text/javascript" charset="utf-8" async defer></script>
+    <script src="../tunnel.js" type="text/javascript" charset="utf-8"></script>
+    <script type="text/javascript">
+    	(function main() {
+		    console.log('main');
+		    let tunnel = new Tunnel();
+		    let failure = (options, status, error) => {
+		        console.log('[1] main.failure', status, error);
+		    };
+		    let apiKey = tunnel.genApiKey('admin', '654321');
+		    console.log('[1] main.apiKey', apiKey);
+		    tunnel.session(apiKey,
+		        (token) => {
+		            console.log('[1] main.session.success', token);
+		        }, failure
+		    );
+		    tunnel.session('2160645a7c365d3718f1488571d1d950',
+		        (token) => {
+		            console.log('[2] main.session.success', token);
+		            tunnel.terminal('ls', token,
+		                (result) => {
+		                    console.log('[1] main.terminal.success', result);
+		                }, failure
+		            );
+		        }, failure
+		    );
+		    tunnel.terminal('pwd', null,
+		        (result) => {
+		            console.log('[2] main.terminal.success', result);
+		        }, failure
+		    );
+		}());
+    </script>
 </body>
 
 </html>

@@ -5,6 +5,34 @@ It establishes a bridge between system and web for performing task on system via
 ### For end-user
 Download the app from [releases](https://github.com/isurfer21/tunnel/releases) section of the [repository](https://github.com/isurfer21/tunnel).
 
+#### Install latest version
+
+With *Shell*:
+
+```bash
+curl -fsSL https://isurfer21.github.io/tunnel/install.sh | sh
+```
+
+With *PowerShell*:
+
+```powershell
+iwr https://isurfer21.github.io/tunnel/install.ps1 -useb | iex
+```
+
+#### Install specific version
+
+With *Shell*:
+
+```bash
+curl -fsSL https://isurfer21.github.io/tunnel/install.sh | sh -s v1.0.1
+```
+
+With *PowerShell*:
+
+```powershell
+iwr https://isurfer21.github.io/tunnel/install.ps1 -useb -outf install.ps1; .\install.ps1 v1.0.1
+```
+
 #### Default or local
 Accessible on host system at default port, i.e., 9999; without credentials so it uses default credentials
 
