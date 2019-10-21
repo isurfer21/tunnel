@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,17 +13,24 @@ import (
 
 	"github.com/kardianos/osext"
 	"github.com/mkideal/cli"
-	"github.com/rs/cors"
-	"github.com/speps/go-hashids"
 )
 
 // Blazon contains methods to publish final output
 type Blazon struct {
 	response http.ResponseWriter
+	request  *http.Request
 	callback string
 }
 
 func (b Blazon) wrapper(content string) {
+	if corsEnabled {
+		b.response.Header().Set("Access-Control-Allow-Origin", b.request.Header.Get("Origin"))
+		b.response.Header().Set("Vary", "Origin")
+		b.response.Header().Set("Access-Control-Allow-Credentials", "true")
+		b.response.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE")
+		b.response.Header().Set("Access-Control-Max-Age", "3600")
+		b.response.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept, X-Requested-With, remember-me")
+	}
 	if b.callback != "" {
 		b.response.Header().Set("Content-Type", "text/javascript")
 		jsonp := b.callback + "(" + content + ")"
@@ -90,110 +96,74 @@ func (c Console) process(input string) string {
 	return string(dixMap)
 }
 
-// Utility functions
-type Utility struct{}
-
-func (u Utility) genAuthKey() string {
-	hd := hashids.NewData()
-	hd.Salt = time.Now().Format(time.RFC3339)
-	h, _ := hashids.NewWithData(hd)
-	id, _ := h.Encode([]int{1, 2, 3})
-	return id
-}
-
-func (u Utility) genApiKey(username string, password string) string {
-	data := []byte(username + "|" + password)
-	id := fmt.Sprintf("%x", md5.Sum(data))
-	return id
-}
-
 // WebService contains browser specific commands.
-type WebService struct {
-	authKey string
-}
+type WebService struct{}
 
-// curl -X POST http://localhost:9999/session
-func (ws WebService) sessionToken(w http.ResponseWriter, r *http.Request) {
+func (ws WebService) handShake(w http.ResponseWriter, r *http.Request) {
 	qp := r.URL.Query()
 	callback := qp.Get("callback")
-	blazon := Blazon{w, callback}
-	nextStep := false
-	clientApiKey := ""
-	if callback != "" {
-		clientApiKey = qp.Get("cak")
-		nextStep = true
+	blazon := Blazon{w, r, callback}
+	dix := map[string]string{
+		"tunnel": "alive"}
+	output, _ := json.Marshal(dix)
+	blazon.wrapper(blazon.publish(string(output)))
+}
+
+func (ws WebService) authenticate(w http.ResponseWriter, r *http.Request) {
+	qp := r.URL.Query()
+	callback := qp.Get("callback")
+	blazon := Blazon{w, r, callback}
+	baUser, baPass, baAuth := r.BasicAuth()
+	if baAuth {
+		if userId == baUser && userPw == baPass {
+			dix := map[string]string{
+				"user": "authorized"}
+			output, _ := json.Marshal(dix)
+			blazon.wrapper(blazon.publish(string(output)))
+		} else {
+			blazon.wrapper(blazon.trouble("Credentials are invalid"))
+		}
 	} else {
-		err := r.ParseForm()
-		if err != nil {
-			blazon.wrapper(blazon.trouble(string(err.Error())))
-		} else {
-			clientApiKey = r.PostFormValue("cak")
-			nextStep = true
-		}
-	}
-	if nextStep {
-		if clientApiKey != "" {
-			util := Utility{}
-			serverApiKey := util.genApiKey(userId, userPw)
-			if clientApiKey == serverApiKey {
-				if authKey == "" {
-					authKey = util.genAuthKey()
-				}
-				dix := map[string]string{
-					"token": authKey}
-				output, _ := json.Marshal(dix)
-				blazon.wrapper(blazon.publish(string(output)))
-			} else {
-				blazon.wrapper(blazon.trouble("ClientAPIKey is invalid"))
-			}
-		} else {
-			blazon.wrapper(blazon.trouble("ClientAPIKey is missing"))
-		}
+		blazon.wrapper(blazon.trouble("Authorization header is missing"))
 	}
 }
 
 // curl -d "token=value&cmd=ls" -X POST http://localhost:9999/terminal
-func (ws WebService) terminalRun(w http.ResponseWriter, r *http.Request) {
+func (ws WebService) terminal(w http.ResponseWriter, r *http.Request) {
 	qp := r.URL.Query()
 	callback := qp.Get("callback")
-	blazon := Blazon{w, callback}
-	if len(authKey) <= 0 {
-		blazon.wrapper(blazon.trouble("Session is not established"))
-	} else {
-		konsole := Console{}
-		nextStep := false
-		command := ""
-		token := ""
-		if callback != "" {
-			command = qp.Get("cmd")
-			token = qp.Get("token")
-			nextStep = true
-		} else {
-			err := r.ParseForm()
-			if err != nil {
-				blazon.wrapper(blazon.trouble(string(err.Error())))
-			} else {
-				command = r.PostFormValue("cmd")
-				token = r.PostFormValue("token")
+	blazon := Blazon{w, r, callback}
+	baUser, baPass, baAuth := r.BasicAuth()
+	if baAuth {
+		if userId == baUser && userPw == baPass {
+			konsole := Console{}
+			nextStep := false
+			command := ""
+			if callback != "" {
+				command = qp.Get("cmd")
 				nextStep = true
-			}
-		}
-		if nextStep {
-			if token != "" {
-				if token == authKey {
-					if command != "" {
-						output := konsole.process(command)
-						blazon.wrapper(blazon.publish(output))
-					} else {
-						blazon.wrapper(blazon.trouble("Command is missing"))
-					}
-				} else {
-					blazon.wrapper(blazon.trouble("Token is invalid"))
-				}
 			} else {
-				blazon.wrapper(blazon.trouble("Token is missing"))
+				err := r.ParseForm()
+				if err != nil {
+					blazon.wrapper(blazon.trouble(string(err.Error())))
+				} else {
+					command = r.PostFormValue("cmd")
+					nextStep = true
+				}
 			}
+			if nextStep {
+				if command != "" {
+					output := konsole.process(command)
+					blazon.wrapper(blazon.publish(output))
+				} else {
+					blazon.wrapper(blazon.trouble("Command is missing"))
+				}
+			}
+		} else {
+			blazon.wrapper(blazon.trouble("Credentials are invalid"))
 		}
+	} else {
+		blazon.wrapper(blazon.trouble("Authorization header is missing"))
 	}
 }
 
@@ -278,38 +248,21 @@ func (s Server) initialize() {
 	}()
 
 	ws := WebService{}
-	if corsEnabled {
-		fmt.Println("CORS: enabled")
-		c := cors.New(cors.Options{
-			AllowedOrigins:   []string{"*"},
-			AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
-			AllowedHeaders:   []string{"Content-Type"},
-			AllowCredentials: true,
-		})
-		mux := http.NewServeMux()
-		mux.Handle("/", http.FileServer(http.Dir(s.docRoot)))
-		mux.HandleFunc("/session", ws.sessionToken)
-		mux.HandleFunc("/terminal", ws.terminalRun)
-		handler := c.Handler(mux)
-		http.ListenAndServe(httpAddr, handler)
-	} else {
-		http.Handle("/", http.FileServer(http.Dir(s.docRoot)))
-		http.HandleFunc("/session", ws.sessionToken)
-		http.HandleFunc("/terminal", ws.terminalRun)
-		http.ListenAndServe(httpAddr, nil)
-	}
+	http.HandleFunc("/", ws.handShake)
+	http.HandleFunc("/authenticate", ws.authenticate)
+	http.HandleFunc("/terminal", ws.terminal)
+	http.ListenAndServe(httpAddr, nil)
 }
 
 var (
 	appName     = "Tunnel"
-	version     = "1.0.1"
+	version     = "2.0.0"
 	docPath     = ""
 	hostIP      = "127.0.0.1"
 	portNum     = 9999
 	appRoot     = false
 	openBrowser = false
 	corsEnabled = true
-	authKey     = ""
 	userId      = "admin"
 	userPw      = "123456"
 )

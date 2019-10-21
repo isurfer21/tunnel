@@ -16,28 +16,13 @@
 		    let failure = (options, status, error) => {
 		        console.log('[1] main.failure', status, error);
 		    };
-		    let apiKey = tunnel.genApiKey('admin', '654321');
-		    console.log('[1] main.apiKey', apiKey);
-		    tunnel.session(apiKey,
-		        (token) => {
-		            console.log('[1] main.session.success', token);
-		        }, failure
-		    );
-		    tunnel.session('2160645a7c365d3718f1488571d1d950',
-		        (token) => {
-		            console.log('[2] main.session.success', token);
-		            tunnel.terminal('ls', token,
-		                (result) => {
-		                    console.log('[1] main.terminal.success', result);
-		                }, failure
-		            );
-		        }, failure
-		    );
-		    tunnel.terminal('pwd', null,
-		        (result) => {
+		    tunnel.login('admin', '123456');
+		    tunnel.authenticate((result) => {
+		        console.log('[1] main.authenticate.success', result);
+		        tunnel.terminal('ls', (result) => {
 		            console.log('[2] main.terminal.success', result);
-		        }, failure
-		    );
+		        }, failure);
+	        }, failure);
 		}());
     </script>
 </body>
