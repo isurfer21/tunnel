@@ -76,7 +76,11 @@ $DOWNLOAD_LINK = if (!$Version) {
       Select-Object -First 1
   }
 } else {
-  "https://github.com/isurfer21/tunnel/releases/download/$Version/tunnel_${OS}_${ARCH}.exe"
+  if ($PSVersionTable.PSEdition -eq 'Core') {
+    "https://github.com/isurfer21/tunnel/releases/download/$Version/tunnel_${OS}_${ARCH}"  
+  } else {
+    "https://github.com/isurfer21/tunnel/releases/download/$Version/tunnel_${OS}_${ARCH}.exe"
+  }
 }
 Write-Output "Suitable build for ${OS} ${ARCH} `n  $DOWNLOAD_LINK"
 
