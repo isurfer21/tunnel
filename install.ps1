@@ -59,7 +59,7 @@ $DOWNLOAD_LINK = if (!$Version) {
   $Response = Invoke-WebRequest 'https://github.com/isurfer21/tunnel/releases' -UseBasicParsing
   if ($PSVersionTable.PSEdition -eq 'Core') {
     $Response.Links |
-      Where-Object { $_.href -like "/isurfer21/tunnel/releases/download/*/tunnel_${OS}_${ARCH}.exe" } |
+      Where-Object { $_.href -like "/isurfer21/tunnel/releases/download/*/tunnel_${OS}_${ARCH}" } |
       ForEach-Object { 'https://github.com' + $_.href } |
       Select-Object -First 1
   } else {
