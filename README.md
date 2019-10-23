@@ -124,19 +124,15 @@ The API Key can be generated using `tunnel.genApiKey(username, password)` that c
     console.log('main');
     let tunnel = new Tunnel();
     let failure = (options, status, error) => {
-        console.log('main.failure', status, error);
+        console.log('[1] main.failure', status, error);
     };
-    let apiKey = tunnel.genApiKey('admin', '123456');
-    tunnel.session(apiKey,
-        (token) => {
-            console.log('main.session.success', token);
-            tunnel.terminal('ls', token,
-                (result) => {
-                    console.log('main.terminal.success', result);
-                }, failure
-            );
-        }, failure
-    );
+    tunnel.login('admin', '123456');
+    tunnel.authenticate((result) => {
+        console.log('[1] main.authenticate.success', result);
+        tunnel.terminal('ls', (result) => {
+            console.log('[2] main.terminal.success', result);
+        }, failure);
+    }, failure);
 }());
 ```
 
@@ -144,4 +140,3 @@ The API Key can be generated using `tunnel.genApiKey(username, password)` that c
 ### References
 
 1. [isurfer21/Suxm](https://github.com/isurfer21/Suxm)
-2. [blueimp/JavaScript-MD5](https://github.com/blueimp/JavaScript-MD5)
