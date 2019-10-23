@@ -38,7 +38,7 @@ Write-Output "Installing the Tunnel CLI at `n  $INSTALLATION_DIR"
 
 if (Test-Path $INSTALLATION_DIR) {
   Write-Output "Removing previous installation"
-  Remove-Item -path "%INSTALLATION_DIR%" -recurse 
+  Remove-Item -path "$INSTALLATION_DIR" -recurse 
 }
 
 if (!(Test-Path $INSTALLATION_DIR)) {
