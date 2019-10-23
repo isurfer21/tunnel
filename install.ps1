@@ -36,13 +36,15 @@ $INSTALLATION_DIR = if ($IsWindows) {
 
 Write-Output "Installing the Tunnel CLI at `n  $INSTALLATION_DIR"
 
-Write-Output "Creating installation directory"
-if (!(Test-Path $INSTALLATION_DIR)) {
-  New-Item $INSTALLATION_DIR -ItemType Directory | Out-Null
-} else {
+if (Test-Path $INSTALLATION_DIR) {
   Write-Output "Removing previous installation"
   Remove-Item -path "%INSTALLATION_DIR%" -recurse 
 }
+
+if (!(Test-Path $INSTALLATION_DIR)) {
+  Write-Output "Creating installation directory"
+  New-Item $INSTALLATION_DIR -ItemType Directory | Out-Null
+} 
 
 $ABSOLUTE_FILEPATH = if ($IsWindows) {
   "$INSTALLATION_DIR\tunnel.exe"
@@ -57,7 +59,7 @@ $DOWNLOAD_LINK = if (!$Version) {
   $Response = Invoke-WebRequest 'https://github.com/isurfer21/tunnel/releases' -UseBasicParsing
   if ($PSVersionTable.PSEdition -eq 'Core') {
     $Response.Links |
-      Where-Object { $_.href -like "/isurfer21/tunnel/releases/download/*/tunnel_${OS}_${ARCH}" } |
+      Where-Object { $_.href -like "/isurfer21/tunnel/releases/download/*/tunnel_${OS}_${ARCH}.exe" } |
       ForEach-Object { 'https://github.com' + $_.href } |
       Select-Object -First 1
   } else {
@@ -69,12 +71,12 @@ $DOWNLOAD_LINK = if (!$Version) {
       $HTMLFile.write($ResponseBytes)
     }
     $HTMLFile.getElementsByTagName('a') |
-      Where-Object { $_.href -like "about:/isurfer21/tunnel/releases/download/*/tunnel_${OS}_${ARCH}" } |
+      Where-Object { $_.href -like "about:/isurfer21/tunnel/releases/download/*/tunnel_${OS}_${ARCH}.exe" } |
       ForEach-Object { $_.href -replace 'about:', 'https://github.com' } |
       Select-Object -First 1
   }
 } else {
-  "https://github.com/isurfer21/tunnel/releases/download/$Version/tunnel_${OS}_${ARCH}"
+  "https://github.com/isurfer21/tunnel/releases/download/$Version/tunnel_${OS}_${ARCH}.exe"
 }
 Write-Output "Suitable build for ${OS} ${ARCH} `n  $DOWNLOAD_LINK"
 
