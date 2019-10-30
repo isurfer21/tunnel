@@ -35,7 +35,7 @@ class Tunnel {
             (res) => {
                 // console.log('Tunnel.authenticate.success', res);
                 if (res.status == 'failure') {
-                    failure(options, res.status, res.response)
+                    failure(res, res.status, res.response)
                 } else {
                     success(res.response);
                 }
@@ -49,7 +49,7 @@ class Tunnel {
             (res) => {
                 // console.log('Tunnel.terminal.success', res);
                 if (res.status == 'failure') {
-                    failure(options, res.status, res.response)
+                    failure(res, res.status, res.response)
                 } else {
                     success(res.response);
                 }
