@@ -248,7 +248,11 @@ func (s Server) initialize() {
 	}()
 
 	ws := WebService{}
-	http.HandleFunc("/", ws.handShake)
+	if docPath != "" {
+		http.Handle("/", http.FileServer(http.Dir(s.docRoot)))
+	} else {
+		http.HandleFunc("/", ws.handShake)
+	}
 	http.HandleFunc("/authenticate", ws.authenticate)
 	http.HandleFunc("/terminal", ws.terminal)
 	http.ListenAndServe(httpAddr, nil)
@@ -256,7 +260,7 @@ func (s Server) initialize() {
 
 var (
 	appName     = "Tunnel"
-	version     = "2.0.0"
+	version     = "2.0.1"
 	docPath     = ""
 	hostIP      = "127.0.0.1"
 	portNum     = 9999
